@@ -1,0 +1,992 @@
+﻿        <!DOCTYPE html>
+<html lang="uk">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Буквена гра</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="js/espeakng.min.js"></script>
+    <!-- React 18 UMD + Babel -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body,
+      #root {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+      }
+
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        background-color: #000;
+      }
+
+      .app {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .display-area {
+        flex: 1;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        transition: background-color 0.3s ease;
+      }
+
+      .big-symbol {
+        font-size: min(66vh, 66vw);
+        font-weight: 800;
+        will-change: transform, opacity;
+        --duration: 1000ms;
+      }
+
+      .hint-text {
+        position: absolute;
+        bottom: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 14px;
+        opacity: 0.6;
+        pointer-events: none;
+        text-align: center;
+      }
+
+      .settings-toggle {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: rgba(0, 0, 0, 0.7);
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 999px;
+        padding: 6px 12px;
+        cursor: pointer;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .settings-toggle:hover {
+        background: rgba(0, 0, 0, 0.9);
+      }
+
+      .settings-panel {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 320px;
+        max-width: 100%;
+        height: 100%;
+        background: rgba(10, 10, 10, 0.96);
+        color: #f7f7f7;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        box-shadow: -4px 0 16px rgba(0, 0, 0, 0.7);
+      }
+
+      .settings-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+
+      .settings-title {
+        font-weight: 600;
+        font-size: 16px;
+      }
+
+      .close-btn {
+        background: transparent;
+        border: none;
+        color: #f7f7f7;
+        font-size: 18px;
+        cursor: pointer;
+      }
+
+      .settings-group {
+        margin-bottom: 8px;
+      }
+
+      .settings-label {
+        font-size: 13px;
+        margin-bottom: 2px;
+        display: block;
+      }
+
+      .settings-hint {
+        font-size: 11px;
+        opacity: 0.7;
+        margin-top: 2px;
+      }
+
+      .settings-input,
+      .settings-select {
+        width: 100%;
+        padding: 4px 6px;
+        font-size: 13px;
+        border-radius: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        background: rgba(20, 20, 20, 0.9);
+        color: #f7f7f7;
+      }
+
+      .settings-inline {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .settings-checkbox-label {
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      input[type="range"] {
+        width: 100%;
+      }
+
+      .footer-note {
+        margin-top: auto;
+        font-size: 11px;
+        opacity: 0.6;
+      }
+
+      /* ANIMATIONS */
+
+      /* 1. Grow from point */
+      .mode-grow {
+        animation: pop-in var(--duration) ease-out forwards;
+      }
+
+      @keyframes pop-in {
+        0% {
+          transform: scale(0);
+          opacity: 0;
+        }
+        40% {
+          opacity: 1;
+        }
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+
+      /* 6. Salut wave */
+      .mode-salut {
+        animation: salut-wave var(--duration) ease-out forwards;
+        text-shadow: 0 0 26px rgba(255, 255, 255, 0.45);
+      }
+
+      @keyframes salut-wave {
+        0% {
+          transform: scale(0.2) rotate(-15deg);
+          opacity: 0;
+        }
+        35% {
+          transform: scale(1.1) rotate(6deg);
+          opacity: 1;
+        }
+        60% {
+          transform: scale(0.95) rotate(-4deg);
+        }
+        80% {
+          transform: scale(1.15) rotate(2deg);
+        }
+        100% {
+          transform: scale(1.12) rotate(0deg);
+        }
+      }
+
+
+      /* 2. Spin + grow */
+      .mode-spin {
+        animation: spin-in var(--duration) ease-out forwards;
+      }
+
+      @keyframes spin-in {
+        0% {
+          transform: scale(0) rotate(720deg);
+          opacity: 0;
+        }
+        40% {
+          opacity: 1;
+        }
+        100% {
+          transform: scale(1) rotate(0deg);
+          opacity: 1;
+        }
+      }
+
+      /* 3. From top */
+      .mode-top {
+        animation: slide-top var(--duration) ease-out forwards;
+      }
+
+      @keyframes slide-top {
+        0% {
+          transform: translateY(-120vh);
+          opacity: 1;
+        }
+        100% {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      /* 4. From random side */
+      .mode-side.from-left {
+        animation: slide-left var(--duration) ease-out forwards;
+      }
+
+      .mode-side.from-right {
+        animation: slide-right var(--duration) ease-out forwards;
+      }
+
+      .mode-side.from-top {
+        animation: slide-top var(--duration) ease-out forwards;
+      }
+
+      .mode-side.from-bottom {
+        animation: slide-bottom var(--duration) ease-out forwards;
+      }
+
+      @keyframes slide-left {
+        0% {
+          transform: translateX(-120vw);
+          opacity: 1;
+        }
+        100% {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+
+      @keyframes slide-right {
+        0% {
+          transform: translateX(120vw);
+          opacity: 1;
+        }
+        100% {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+
+      @keyframes slide-bottom {
+        0% {
+          transform: translateY(120vh);
+          opacity: 1;
+        }
+        100% {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      /* 5. Fade-in */
+      .mode-fade {
+        animation: fade-in var(--duration) ease-in-out forwards;
+      }
+
+      @keyframes fade-in {
+        0% {
+          opacity: 0;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .settings-panel {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const { useState, useEffect, useRef } = React;
+
+      const UK_LETTERS = "АБВГҐДЕЄЖЗИІЇЙКЛМНОПРСТУФХЦЧШЩЬЮЯ";
+
+const UK_LETTER_SOUNDS = {
+  "А": "а",
+  "Б": "бе",
+  "В": "ве",
+  "Г": "ге",
+  "Ґ": "ґе",
+  "Д": "де",
+  "Е": "е",
+  "Є": "є",
+  "Ж": "же",
+  "З": "зе",
+  "И": "и",
+  "І": "і",
+  "Ї": "ї",
+  "Й": "йот",
+  "К": "ка",
+  "Л": "ел",
+  "М": "ем",
+  "Н": "ен",
+  "О": "о",
+  "П": "пе",
+  "Р": "ер",
+  "С": "ес",
+  "Т": "те",
+  "У": "у",
+  "Ф": "еф",
+  "Х": "ха",
+  "Ц": "це",
+  "Ч": "че",
+  "Ш": "ша",
+  "Щ": "ща",
+  "Ь": "мʼякий знак",
+  "Ю": "ю",
+  "Я": "я",
+};
+
+      const translations = {
+        uk: {
+          settings: "Налаштування",
+          animationMode: "Режим анімації",
+          modeGrow: "1 — З точки, росте",
+          modeGrowHint:
+            "Буква з'являється з точки в центрі та збільшується до 2/3 екрана.",
+          modeSpin: "2 — З точки, з обертанням",
+          modeSpinHint:
+            "Спочатку швидке обертання, потім повільніше, поки буква росте.",
+          modeTop: "3 — Виїзд зверху",
+          modeTopHint:
+            "Велика буква заїжджає зверху екрана в центр, без обертання.",
+          modeSide: "4 — Виїзд з боку",
+          modeSideHint:
+            "Велика буква заїжджає з випадкової сторони екрана (ліво/право/верх/низ).",
+          modeFade: "5 — Плавне проявлення",
+          modeFadeHint:
+            "Велика буква плавно проявляється в центрі (fade-in).",
+          modeSalut: "6 — Салют-хвиля",
+          modeSalutHint:
+            "Буква розкривається з мерехтінням та легким похитуванням, ніби вітається.",
+          letterColor: "Колір букви",
+          randomLetterColor: "Випадковий колір кожної букви",
+          backgroundColor: "Колір фону",
+          duration: "Тривалість анімації, мс",
+          durationHint:
+            "Чим більше значення, тим повільніше й довше триває анімація.",
+          sounds: "Звуки (клік + озвучування букви)",
+          soundsHint:
+            "Якщо вимкнути, буква з'являється без звуку та озвучки.",
+          language: "Мова інтерфейсу",
+          languageHint: "Лише підписи в меню, букви — українські.",
+          close: "Закрити",
+          toggleHint: "Натисніть букву на клавіатурі, щоб побачити її.",
+          modeLabel: "Режим",
+        },
+        en: {
+          settings: "Settings",
+          animationMode: "Animation mode",
+          modeGrow: "1 — From dot, growing",
+          modeGrowHint:
+            "Letter appears from a dot in the center and grows to 2/3 of the screen.",
+          modeSpin: "2 — From dot, spinning",
+          modeSpinHint:
+            "Starts with fast spinning, then slows down while the letter grows.",
+          modeTop: "3 — From top",
+          modeTopHint:
+            "Big letter slides down from the top into the center, no rotation.",
+          modeSide: "4 — From side",
+          modeSideHint:
+            "Big letter slides in from a random side (left/right/top/bottom).",
+          modeFade: "5 — Fade-in",
+          modeFadeHint:
+            "Big letter simply fades in in the center (fade-in).",
+          modeSalut: "6 — Salut wave",
+          modeSalutHint:
+            "Letter pops in with a waving motion and soft glow, like saying salut.",
+          letterColor: "Letter color",
+          randomLetterColor: "Random color for each letter",
+          backgroundColor: "Background color",
+          duration: "Animation duration, ms",
+          durationHint:
+            "Higher value means slower and longer animation.",
+          sounds: "Sounds (click + letter voice)",
+          soundsHint:
+            "If off, letter appears without click or voice.",
+          language: "Interface language",
+          languageHint: "Only UI labels change, letters stay Ukrainian.",
+          close: "Close",
+          toggleHint: "Press a letter on the keyboard to see it.",
+          modeLabel: "Mode",
+        },
+      };
+
+      function isUkrainianLetter(char) {
+        if (!char || char.length !== 1) return false;
+        const upper = char.toUpperCase();
+        return UK_LETTERS.includes(upper);
+      }
+
+      function getRandomSide() {
+        const sides = ["from-left", "from-right", "from-top", "from-bottom"];
+        return sides[Math.floor(Math.random() * sides.length)];
+      }
+
+      function App() {
+        const [symbol, setSymbol] = useState(null);
+        const [animationKey, setAnimationKey] = useState(0);
+        const [mode, setMode] = useState("grow"); // grow | spin | top | side | fade | salut
+        const [sideClass, setSideClass] = useState("from-left");
+        const [letterColor, setLetterColor] = useState("#ffffff");
+        const [randomLetterColor, setRandomLetterColor] = useState(false);
+        const [backgroundColor, setBackgroundColor] = useState("#000000");
+        const [duration, setDuration] = useState(1200); // ms
+        const [soundsEnabled, setSoundsEnabled] = useState(true);
+        const [settingsOpen, setSettingsOpen] = useState(false);
+        const [uiLang, setUiLang] = useState("uk");
+
+        const clearTimeoutRef = useRef(null);
+        const audioContextRef = useRef(null);
+        const ttsRef = useRef(null);
+        const displayAreaRef = useRef(null);
+        const sampleLengthRef = useRef(0);
+        const [ttsReady, setTtsReady] = useState(false);
+        const salutBurstTimeout = useRef(null);
+
+        const t = translations[uiLang];
+
+        // Firework helpers
+        function getSalutOrigin() {
+          if (!displayAreaRef.current) {
+            return { x: 0.5, y: 0.5 };
+          }
+          const rect = displayAreaRef.current.getBoundingClientRect();
+          return {
+            x: (rect.left + rect.width / 2) / window.innerWidth,
+            y: (rect.top + rect.height / 2) / window.innerHeight,
+          };
+        }
+
+        function launchSalutFirework(baseColor) {
+          if (typeof confetti !== "function") return;
+          const origin = getSalutOrigin();
+          const palette = baseColor
+            ? [baseColor, "#fff2b2", "#ffd966", "#7fdaff"]
+            : ["#fff2b2", "#ffd966", "#7fdaff"];
+
+          const mainBurst = {
+            particleCount: 140,
+            spread: 70,
+            startVelocity: 48,
+            gravity: 0.8,
+            scalar: 1.4,
+            origin,
+            colors: palette,
+          };
+
+          confetti(mainBurst);
+
+          if (salutBurstTimeout.current) {
+            clearTimeout(salutBurstTimeout.current);
+          }
+
+          salutBurstTimeout.current = setTimeout(() => {
+            confetti({
+              ...mainBurst,
+              particleCount: 90,
+              spread: 100,
+              decay: 0.9,
+              scalar: 1.1,
+            });
+            salutBurstTimeout.current = null;
+          }, Math.min(duration * 0.35, 600));
+        }
+
+        // Init / reuse AudioContext
+        function getAudioContext() {
+          if (audioContextRef.current) {
+            resumeContext(audioContextRef.current);
+            return audioContextRef.current;
+          }
+          const AudioCtx =
+            window.AudioContext || window.webkitAudioContext || null;
+          if (!AudioCtx) return null;
+          const ctx = new AudioCtx();
+          audioContextRef.current = ctx;
+          resumeContext(ctx);
+          return ctx;
+        }
+
+        function resumeContext(ctx) {
+          if (!ctx || ctx.state !== "suspended") return;
+          ctx.resume().catch((err) =>
+            console.error("AudioContext resume failed", err)
+          );
+        }
+
+        function playPcmSamples(ctx, samples) {
+          if (!ctx || !samples || !samples.length) return;
+
+          // eSpeak-ng повертає моно PCM; типовий sampleRate ~22050 Гц.
+          const sampleRate = 22050;
+          const buffer = ctx.createBuffer(1, samples.length, sampleRate);
+          const channelData = buffer.getChannelData(0);
+
+          for (let i = 0; i < samples.length; i++) {
+            channelData[i] = samples[i];
+          }
+
+          const source = ctx.createBufferSource();
+          source.buffer = buffer;
+          source.connect(ctx.destination);
+          source.start();
+        }
+
+        function queueSamples(samples) {
+          if (!samples || !samples.length) return;
+          const chunk =
+            samples instanceof Float32Array
+              ? new Float32Array(samples)
+              : Float32Array.from(samples, (value) => value / 32768);
+          sampleQueueRef.current.push(chunk);
+          sampleLengthRef.current += chunk.length;
+        }
+
+        function flushQueuedSamples(ctx) {
+          if (!ctx || !sampleLengthRef.current) return;
+          const merged = new Float32Array(sampleLengthRef.current);
+          let offset = 0;
+          sampleQueueRef.current.forEach((chunk) => {
+            merged.set(chunk, offset);
+            offset += chunk.length;
+          });
+          sampleQueueRef.current = [];
+          sampleLengthRef.current = 0;
+          playPcmSamples(ctx, merged);
+        }
+
+
+        function playClick() {
+          const ctx = getAudioContext();
+          if (!ctx) return;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+
+          osc.type = "square";
+          osc.frequency.value = 1000;
+
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+
+          const now = ctx.currentTime;
+          gain.gain.setValueAtTime(0.18, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+
+          osc.start(now);
+          osc.stop(now + 0.06);
+        }
+
+        function speakLetter(letter) {
+          // Якщо tts ще не готовий — просто не озвучуємо (але клік лишається)
+          if (!ttsReady || !ttsRef.current) return;
+
+          const tts = ttsRef.current;
+          const ctx = getAudioContext();
+          if (!ctx) return;
+
+          // Беремо "шкільну" назву літери з мапи (А → "а", Б → "бе" тощо)
+          const sound = UK_LETTER_SOUNDS[letter] || letter;
+
+          try {
+            // Синтез: callback поверне семпли й події
+            tts.synthesize(sound, function (samples) {
+              try {
+                if (!samples) {
+                  flushQueuedSamples(ctx);
+                  return;
+                }
+                queueSamples(samples);
+              } catch (e) {
+                console.error("Error playing synthesized audio:", e);
+              }
+            });
+          } catch (err) {
+            console.error("Error in tts.synthesize:", err);
+          }
+        }
+
+
+        function triggerSymbol(newSymbol, isLetter) {
+          // зупиняємо автоочищення попереднього
+          if (clearTimeoutRef.current) {
+            clearTimeout(clearTimeoutRef.current);
+            clearTimeoutRef.current = null;
+          }
+
+          // для режиму "side" вибираємо випадкову сторону
+          if (mode === "side") {
+            setSideClass(getRandomSide());
+          }
+
+          // випадковий колір букви (якщо увімкнено)
+          let finalColor = letterColor;
+          if (randomLetterColor) {
+            const r = Math.floor(Math.random() * 200) + 30;
+            const g = Math.floor(Math.random() * 200) + 30;
+            const b = Math.floor(Math.random() * 200) + 30;
+            finalColor = `rgb(${r}, ${g}, ${b})`;
+          }
+
+          setSymbol({ char: newSymbol, color: finalColor, isLetter });
+
+          // змінюємо ключ, щоб перезапустити анімацію
+          setAnimationKey((k) => k + 1);
+
+          if (mode === "salut") {
+            launchSalutFirework(finalColor);
+          }
+
+          if (soundsEnabled) {
+            playClick();
+            if (isLetter) {
+              speakLetter(newSymbol);
+            }
+          }
+
+          // автоочищення через 5 секунд
+          clearTimeoutRef.current = setTimeout(() => {
+            setSymbol(null);
+            clearTimeoutRef.current = null;
+          }, 5000);
+        }
+
+
+useEffect(() => {
+  // Перевіряємо, що бібліотека завантажилась
+  if (typeof eSpeakNG === "undefined") {
+    console.warn("eSpeakNG library not found. Check <script src='js/espeakng.min.js'> path.");
+    return;
+  }
+
+  // Створюємо інстанс: шлях до воркера в тій же папці js/
+  const tts = new eSpeakNG("js/espeakng.worker.js", function () {
+    console.log("eSpeakNG worker is ready");
+    // Налаштуємо голос на українську
+    try {
+      // eSpeak-ng використовує код мови 'uk'
+      tts.set_voice("uk");
+      tts.set_rate(140); // повільніше, щоб дитині було легше
+      tts.set_pitch(50);
+    } catch (err) {
+      console.error("Error configuring eSpeakNG:", err);
+    }
+
+    ttsRef.current = tts;
+    setTtsReady(true);
+  });
+
+  return () => {
+    // спеціального destroy немає, але очищати нічого не треба
+  };
+}, []);
+
+useEffect(() => {
+  // Для Chrome, Edge, Opera — вони завантажують голоси пізніше
+  window.speechSynthesis.onvoiceschanged = () => {
+    speechSynthesis.getVoices();
+  };
+}, []);
+
+        // Обробка натискань клавіш
+        useEffect(() => {
+          function handleKeyDown(e) {
+            // не ловимо, якщо вводять у інпутах
+            const tag = e.target.tagName;
+            if (
+              tag === "INPUT" ||
+              tag === "SELECT" ||
+              tag === "TEXTAREA"
+            ) {
+              return;
+            }
+
+            const key = e.key;
+
+            if (key.length !== 1) {
+              // несимвольна клавіша -> смайлик
+              triggerSymbol("😮", false);
+              return;
+            }
+
+            if (isUkrainianLetter(key)) {
+              triggerSymbol(key.toUpperCase(), true);
+            } else {
+              triggerSymbol("😮", false);
+            }
+          }
+
+          window.addEventListener("keydown", handleKeyDown);
+          return () => {
+            window.removeEventListener("keydown", handleKeyDown);
+          };
+        }, [mode, randomLetterColor, letterColor, soundsEnabled]);
+
+        // При розмонтажі — очистити таймер
+        useEffect(() => {
+          return () => {
+            if (clearTimeoutRef.current) {
+              clearTimeout(clearTimeoutRef.current);
+            }
+          };
+        }, []);
+
+        const modeClass =
+          mode === "grow"
+            ? "mode-grow"
+            : mode === "spin"
+            ? "mode-spin"
+            : mode === "top"
+            ? "mode-top"
+            : mode === "side"
+            ? "mode-side " + sideClass
+            : mode === "salut"
+            ? "mode-salut"
+            : "mode-fade";
+
+        const salutFontSize = undefined;
+
+        return (
+          <div className="app">
+            <div
+              className="display-area"
+              style={{ backgroundColor: backgroundColor }}
+              ref={displayAreaRef}
+            >
+              <button
+                className="settings-toggle"
+                onClick={() => setSettingsOpen((o) => !o)}
+              >
+                <span>⚙</span>
+                <span>{t.settings}</span>
+              </button>
+
+              {symbol && (
+                <div
+                  key={animationKey}
+                  className={`big-symbol ${modeClass}`}
+                  style={{
+                    color: symbol.color,
+                    "--duration": `${duration}ms`,
+                    "--symbol-color": symbol.color,
+                    fontSize: salutFontSize,
+                  }}
+                >
+                  {symbol.char}
+                </div>
+              )}
+
+              {!symbol && (
+                <div className="hint-text">
+                  {t.toggleHint}
+                  <br />
+                  ({t.modeLabel}: {" "}
+                  {mode === "grow"
+                    ? "1"
+                    : mode === "spin"
+                    ? "2"
+                    : mode === "top"
+                    ? "3"
+                    : mode === "side"
+                    ? "4"
+                    : mode === "salut"
+                    ? "6"
+                    : "5"}
+                  )
+                </div>
+              )}
+
+              {settingsOpen && (
+                <div className="settings-panel">
+                  <div className="settings-header">
+                    <div className="settings-title">{t.settings}</div>
+                    <button
+                      className="close-btn"
+                      onClick={() => setSettingsOpen(false)}
+                      aria-label={t.close}
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  {/* Мова інтерфейсу */}
+                  <div className="settings-group">
+                    <label className="settings-label">
+                      {t.language}
+                    </label>
+                    <select
+                      className="settings-select"
+                      value={uiLang}
+                      onChange={(e) => setUiLang(e.target.value)}
+                    >
+                      <option value="uk">Українська</option>
+                      <option value="en">English</option>
+                    </select>
+                    <div className="settings-hint">
+                      {t.languageHint}
+                    </div>
+                  </div>
+
+                  {/* Режим анімації */}
+                  <div className="settings-group">
+                    <label className="settings-label">
+                      {t.animationMode}
+                    </label>
+                    <select
+                      className="settings-select"
+                      value={mode}
+                      onChange={(e) => setMode(e.target.value)}
+                    >
+                      <option value="grow">{t.modeGrow}</option>
+                      <option value="spin">{t.modeSpin}</option>
+                      <option value="top">{t.modeTop}</option>
+                      <option value="side">{t.modeSide}</option>
+                      <option value="fade">{t.modeFade}</option>
+                      <option value="salut">{t.modeSalut}</option>
+                    </select>
+                    <div className="settings-hint">
+                      {mode === "grow"
+                        ? t.modeGrowHint
+                        : mode === "spin"
+                        ? t.modeSpinHint
+                        : mode === "top"
+                        ? t.modeTopHint
+                        : mode === "side"
+                        ? t.modeSideHint
+                        : mode === "salut"
+                        ? t.modeSalutHint
+                        : t.modeFadeHint}
+                    </div>
+                  </div>
+
+                  {/* Колір букви + випадковий */}
+                  <div className="settings-group">
+                    <label className="settings-label">
+                      {t.letterColor}
+                    </label>
+                    <div className="settings-inline">
+                      <input
+                        type="color"
+                        value={letterColor}
+                        disabled={randomLetterColor}
+                        onChange={(e) =>
+                          setLetterColor(e.target.value)
+                        }
+                      />
+                      <label className="settings-checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={randomLetterColor}
+                          onChange={(e) =>
+                            setRandomLetterColor(e.target.checked)
+                          }
+                        />
+                        {t.randomLetterColor}
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Колір фону */}
+                  <div className="settings-group">
+                    <label className="settings-label">
+                      {t.backgroundColor}
+                    </label>
+                    <input
+                      type="color"
+                      value={backgroundColor}
+                      onChange={(e) =>
+                        setBackgroundColor(e.target.value)
+                      }
+                    />
+                  </div>
+
+                  {/* Тривалість анімації */}
+                  <div className="settings-group">
+                    <label className="settings-label">
+                      {t.duration}: {duration}
+                    </label>
+                    <input
+                      type="range"
+                      min="300"
+                      max="4000"
+                      step="100"
+                      value={duration}
+                      onChange={(e) =>
+                        setDuration(Number(e.target.value))
+                      }
+                    />
+                    <div className="settings-hint">
+                      {t.durationHint}
+                    </div>
+                  </div>
+
+                  {/* Звуки */}
+                  <div className="settings-group">
+                    <label className="settings-checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={soundsEnabled}
+                        onChange={(e) =>
+                          setSoundsEnabled(e.target.checked)
+                        }
+                      />
+                      {t.sounds}
+                    </label>
+                    <div className="settings-hint">
+                      {t.soundsHint}
+                    </div>
+                  </div>
+
+                  <div className="footer-note">
+                    • Працює з українськими літерами (А–Я, Ґ, Є, І, Ї).
+                    <br />
+                    • Остання натиснута клавіша перериває попередню
+                    анімацію.
+                    <br />
+                    • Символ зникає через 5 секунд або при наступній
+                    клавіші.
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      }
+
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(<App />);
+    </script>
+  </body>
+</html>
