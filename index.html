@@ -101,6 +101,24 @@
         box-shadow: -4px 0 16px rgba(0, 0, 0, 0.7);
       }
 
+      .reset-btn {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.08);
+        color: #fff;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s ease, border-color 0.2s ease;
+      }
+
+      .reset-btn:hover {
+        background: rgba(255, 255, 255, 0.15);
+        border-color: rgba(255, 255, 255, 0.6);
+      }
+
       .settings-header {
         display: flex;
         justify-content: space-between;
@@ -329,9 +347,47 @@
     <div id="root"></div>
 
     <script type="text/babel">
-      const { useState, useEffect, useRef } = React;
+      const { useState, useEffect, useRef, useMemo } = React;
 
       const UK_LETTERS = "АБВГҐДЕЄЖЗИІЇЙКЛМНОПРСТУФХЦЧШЩЬЮЯ";
+
+const SETTINGS_STORAGE_KEY = "emiliKeyboardSettings";
+
+const LATIN_TO_UKRAINIAN = {
+  q: "Й",
+  w: "Ц",
+  e: "У",
+  r: "К",
+  t: "Е",
+  y: "Н",
+  u: "Г",
+  i: "Ш",
+  o: "Щ",
+  p: "З",
+  "[": "Х",
+  "]": "Ї",
+  a: "Ф",
+  s: "І",
+  d: "В",
+  f: "А",
+  g: "П",
+  h: "Р",
+  j: "О",
+  k: "Л",
+  l: "Д",
+  ";": "Ж",
+  "'": "Є",
+  z: "Я",
+  x: "Ч",
+  c: "С",
+  v: "М",
+  b: "И",
+  n: "Т",
+  m: "Ь",
+  ",": "Б",
+  ".": "Ю",
+  "\\": "Ґ",
+};
 
 const UK_LETTER_SOUNDS = {
   "А": "а",
@@ -400,6 +456,8 @@ const UK_LETTER_SOUNDS = {
           sounds: "Звуки (клік + озвучування букви)",
           soundsHint:
             "Якщо вимкнути, буква з'являється без звуку та озвучки.",
+          reset: "Скинути налаштування",
+          resetHint: "Повертає режим, кольори й інші опції до початкових.",
           language: "Мова інтерфейсу",
           languageHint: "Лише підписи в меню, букви — українські.",
           close: "Закрити",
@@ -436,6 +494,8 @@ const UK_LETTER_SOUNDS = {
           sounds: "Sounds (click + letter voice)",
           soundsHint:
             "If off, letter appears without click or voice.",
+          reset: "Reset settings",
+          resetHint: "Restores default mode, colors, duration and sounds.",
           language: "Interface language",
           languageHint: "Only UI labels change, letters stay Ukrainian.",
           close: "Close",
@@ -455,18 +515,55 @@ const UK_LETTER_SOUNDS = {
         return sides[Math.floor(Math.random() * sides.length)];
       }
 
+      function resolveUkrainianLetter(char) {
+        if (!char || char.length !== 1) return null;
+        const upper = char.toUpperCase();
+        if (UK_LETTERS.includes(upper)) {
+          return upper;
+        }
+        const mapped = LATIN_TO_UKRAINIAN[char.toLowerCase()];
+        return mapped || null;
+      }
+
       function App() {
+        const savedSettings = useMemo(() => {
+          if (typeof window === "undefined" || !window.localStorage) {
+            return null;
+          }
+          try {
+            const raw = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
+            return raw ? JSON.parse(raw) : null;
+          } catch (err) {
+            console.warn("Failed to parse saved settings", err);
+            return null;
+          }
+        }, []);
+
         const [symbol, setSymbol] = useState(null);
         const [animationKey, setAnimationKey] = useState(0);
-        const [mode, setMode] = useState("grow"); // grow | spin | top | side | fade | salut
-        const [sideClass, setSideClass] = useState("from-left");
-        const [letterColor, setLetterColor] = useState("#ffffff");
-        const [randomLetterColor, setRandomLetterColor] = useState(false);
-        const [backgroundColor, setBackgroundColor] = useState("#000000");
-        const [duration, setDuration] = useState(1200); // ms
-        const [soundsEnabled, setSoundsEnabled] = useState(true);
+        const [mode, setMode] = useState(savedSettings?.mode || "grow");
+        const [sideClass, setSideClass] = useState(
+          savedSettings?.sideClass || "from-left"
+        );
+        const [letterColor, setLetterColor] = useState(
+          savedSettings?.letterColor || "#ffffff"
+        );
+        const [randomLetterColor, setRandomLetterColor] = useState(
+          savedSettings?.randomLetterColor || false
+        );
+        const [backgroundColor, setBackgroundColor] = useState(
+          savedSettings?.backgroundColor || "#000000"
+        );
+        const [duration, setDuration] = useState(
+          typeof savedSettings?.duration === "number"
+            ? savedSettings.duration
+            : 1200
+        );
+        const [soundsEnabled, setSoundsEnabled] = useState(
+          savedSettings?.soundsEnabled ?? true
+        );
         const [settingsOpen, setSettingsOpen] = useState(false);
-        const [uiLang, setUiLang] = useState("uk");
+        const [uiLang, setUiLang] = useState(savedSettings?.uiLang || "uk");
 
         const clearTimeoutRef = useRef(null);
         const audioContextRef = useRef(null);
@@ -477,6 +574,50 @@ const UK_LETTER_SOUNDS = {
         const salutBurstTimeout = useRef(null);
 
         const t = translations[uiLang];
+
+        const DEFAULTS = {
+          mode: "grow",
+          sideClass: "from-left",
+          letterColor: "#ffffff",
+          randomLetterColor: false,
+          backgroundColor: "#000000",
+          duration: 1200,
+          soundsEnabled: true,
+          uiLang: "uk",
+        };
+
+        useEffect(() => {
+          if (typeof window === "undefined" || !window.localStorage) {
+            return;
+          }
+          try {
+            const payload = {
+              mode,
+              sideClass,
+              letterColor,
+              randomLetterColor,
+              backgroundColor,
+              duration,
+              soundsEnabled,
+              uiLang,
+            };
+            window.localStorage.setItem(
+              SETTINGS_STORAGE_KEY,
+              JSON.stringify(payload)
+            );
+          } catch (err) {
+            console.warn("Unable to save settings", err);
+          }
+        }, [
+          mode,
+          sideClass,
+          letterColor,
+          randomLetterColor,
+          backgroundColor,
+          duration,
+          soundsEnabled,
+          uiLang,
+        ]);
 
         // Firework helpers
         function getSalutOrigin() {
@@ -683,6 +824,25 @@ const UK_LETTER_SOUNDS = {
           }, 5000);
         }
 
+        function resetSettings() {
+          setMode(DEFAULTS.mode);
+          setSideClass(DEFAULTS.sideClass);
+          setLetterColor(DEFAULTS.letterColor);
+          setRandomLetterColor(DEFAULTS.randomLetterColor);
+          setBackgroundColor(DEFAULTS.backgroundColor);
+          setDuration(DEFAULTS.duration);
+          setSoundsEnabled(DEFAULTS.soundsEnabled);
+          setUiLang(DEFAULTS.uiLang);
+          setSymbol(null);
+          if (typeof window !== "undefined" && window.localStorage) {
+            try {
+              window.localStorage.removeItem(SETTINGS_STORAGE_KEY);
+            } catch (err) {
+              console.warn("Unable to clear saved settings", err);
+            }
+          }
+        }
+
 
 useEffect(() => {
   // Перевіряємо, що бібліотека завантажилась
@@ -741,8 +901,9 @@ useEffect(() => {
               return;
             }
 
-            if (isUkrainianLetter(key)) {
-              triggerSymbol(key.toUpperCase(), true);
+            const resolved = resolveUkrainianLetter(key);
+            if (resolved) {
+              triggerSymbol(resolved, true);
             } else {
               triggerSymbol("😮", false);
             }
@@ -967,6 +1128,13 @@ useEffect(() => {
                     <div className="settings-hint">
                       {t.soundsHint}
                     </div>
+                  </div>
+
+                  <div className="settings-group">
+                    <button className="reset-btn" onClick={resetSettings}>
+                      {t.reset}
+                    </button>
+                    <div className="settings-hint">{t.resetHint}</div>
                   </div>
 
                   <div className="footer-note">
