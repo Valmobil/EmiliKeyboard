@@ -692,6 +692,69 @@ const UK_LETTER_SOUNDS = {
           };
         }, [keyboardPinned]);
 
+        const processCharacterInput = useCallback(
+          (rawChar) => {
+            if (!rawChar || rawChar.length === 0) {
+              return;
+            }
+            if (/\s/.test(rawChar)) {
+              return;
+            }
+            const resolved = resolveUkrainianLetter(rawChar);
+            if (resolved) {
+              triggerSymbol(resolved, true);
+            } else {
+              triggerSymbol("😮", false);
+            }
+          },
+          [triggerSymbol]
+        );
+
+        const handleHiddenInputChange = useCallback(
+          (event) => {
+            const { data } = event.nativeEvent || {};
+            if (typeof data === "string" && data.length > 0) {
+              for (const char of data) {
+                processCharacterInput(char);
+              }
+            } else {
+              const value = event.target.value;
+              if (value && value.length > 0) {
+                for (const char of value) {
+                  processCharacterInput(char);
+                }
+              }
+            }
+            event.target.value = "";
+          },
+          [processCharacterInput]
+        );
+
+        const handleHiddenBeforeInput = useCallback(
+          (event) => {
+            if (typeof event.data !== "string" || event.data.length === 0) {
+              return;
+            }
+            for (const char of event.data) {
+              processCharacterInput(char);
+            }
+            event.preventDefault();
+          },
+          [processCharacterInput]
+        );
+
+        const handleHiddenCompositionEnd = useCallback(
+          (event) => {
+            if (typeof event.data === "string" && event.data.length > 0) {
+              for (const char of event.data) {
+                processCharacterInput(char);
+              }
+            }
+            event.target.value = "";
+          },
+          [processCharacterInput]
+        );
+
         useEffect(() => {
           if (typeof window === "undefined" || !window.localStorage) {
             return;
@@ -1002,25 +1065,20 @@ useEffect(() => {
 
             const key = e.key;
 
-            if (key.length !== 1) {
-              // несимвольна клавіша -> смайлик
-              triggerSymbol("😮", false);
+            if (key.length === 1) {
+              processCharacterInput(key);
               return;
             }
 
-            const resolved = resolveUkrainianLetter(key);
-            if (resolved) {
-              triggerSymbol(resolved, true);
-            } else {
-              triggerSymbol("😮", false);
-            }
+            // несимвольна клавіша -> смайлик
+            triggerSymbol("😮", false);
           }
 
           window.addEventListener("keydown", handleKeyDown);
           return () => {
             window.removeEventListener("keydown", handleKeyDown);
           };
-        }, [mode, randomLetterColor, letterColor, soundsEnabled]);
+        }, [mode, randomLetterColor, letterColor, soundsEnabled, processCharacterInput]);
 
         // При розмонтажі — очистити таймер
         useEffect(() => {
@@ -1064,9 +1122,10 @@ useEffect(() => {
                     autoCapitalize="none"
                     spellCheck="false"
                     type="text"
-                    onInput={(e) => {
-                      e.target.value = "";
-                    }}
+                    inputMode="text"
+                    onBeforeInput={handleHiddenBeforeInput}
+                    onCompositionEnd={handleHiddenCompositionEnd}
+                    onInput={handleHiddenInputChange}
                   />
                   <button
                     className="keyboard-toggle"
