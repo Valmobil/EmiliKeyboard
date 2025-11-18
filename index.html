@@ -85,6 +85,44 @@
         background: rgba(0, 0, 0, 0.9);
       }
 
+      .keyboard-toggle {
+        position: absolute;
+        bottom: 12px;
+        left: 12px;
+        background: rgba(0, 0, 0, 0.7);
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 999px;
+        padding: 8px 14px;
+        cursor: pointer;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        z-index: 2;
+      }
+
+      .keyboard-toggle:active {
+        background: rgba(0, 0, 0, 0.9);
+      }
+
+      .hidden-keyboard-input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        border: 0;
+        clip: rect(0, 0, 0, 0);
+        overflow: hidden;
+        opacity: 0;
+      }
+
+      @media (pointer: fine) {
+        .keyboard-toggle {
+          display: none;
+        }
+      }
+
       .settings-panel {
         position: absolute;
         top: 0;
@@ -347,7 +385,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-      const { useState, useEffect, useRef, useMemo } = React;
+      const { useState, useEffect, useRef, useMemo, useCallback } = React;
 
       const UK_LETTERS = "АБВГҐДЕЄЖЗИІЇЙКЛМНОПРСТУФХЦЧШЩЬЮЯ";
 
@@ -461,6 +499,8 @@ const UK_LETTER_SOUNDS = {
           language: "Мова інтерфейсу",
           languageHint: "Лише підписи в меню, букви — українські.",
           close: "Закрити",
+          keyboardShow: "Показати клавіатуру",
+          keyboardHide: "Приховати клавіатуру",
           toggleHint: "Натисніть букву на клавіатурі, щоб побачити її.",
           modeLabel: "Режим",
         },
@@ -495,11 +535,14 @@ const UK_LETTER_SOUNDS = {
           soundsHint:
             "If off, letter appears without click or voice.",
           reset: "Reset settings",
-          resetHint: "Restores default mode, colors, duration and sounds.",
+          resetHint: "Restores default mode, colors, and other options.",
           language: "Interface language",
-          languageHint: "Only UI labels change, letters stay Ukrainian.",
+          languageHint: "Only the menu labels change; letters stay Ukrainian.",
           close: "Close",
-          toggleHint: "Press a letter on the keyboard to see it.",
+          keyboardShow: "Show keyboard",
+          keyboardHide: "Hide keyboard",
+          toggleHint: "Press a keyboard letter to see it on the screen.",
+          keyboardToggle: "Show/hide keyboard",
           modeLabel: "Mode",
         },
       };
@@ -541,7 +584,7 @@ const UK_LETTER_SOUNDS = {
 
         const [symbol, setSymbol] = useState(null);
         const [animationKey, setAnimationKey] = useState(0);
-        const [mode, setMode] = useState(savedSettings?.mode || "grow");
+        const [mode, setMode] = useState(savedSettings?.mode || "salut");
         const [sideClass, setSideClass] = useState(
           savedSettings?.sideClass || "from-left"
         );
@@ -564,6 +607,8 @@ const UK_LETTER_SOUNDS = {
         );
         const [settingsOpen, setSettingsOpen] = useState(false);
         const [uiLang, setUiLang] = useState(savedSettings?.uiLang || "uk");
+        const hiddenInputRef = useRef(null);
+        const [keyboardPinned, setKeyboardPinned] = useState(false);
 
         const clearTimeoutRef = useRef(null);
         const audioContextRef = useRef(null);
@@ -576,7 +621,7 @@ const UK_LETTER_SOUNDS = {
         const t = translations[uiLang];
 
         const DEFAULTS = {
-          mode: "grow",
+          mode: "salut",
           sideClass: "from-left",
           letterColor: "#ffffff",
           randomLetterColor: false,
@@ -585,6 +630,60 @@ const UK_LETTER_SOUNDS = {
           soundsEnabled: true,
           uiLang: "uk",
         };
+
+        const isMobileAndroid = useMemo(() => {
+          if (typeof navigator === "undefined") {
+            return false;
+          }
+          const ua = navigator.userAgent || navigator.vendor || "";
+          return /android/i.test(ua);
+        }, []);
+
+        const requestKeyboard = useCallback(() => {
+          const input = hiddenInputRef.current;
+          if (!input) {
+            return;
+          }
+
+          // Ensure input is focusable
+          input.removeAttribute("disabled");
+          input.setAttribute("inputmode", "text");
+
+          // Focus and select to prompt keyboard
+          input.focus();
+          input.select();
+        }, []);
+
+        const handleKeyboardToggle = useCallback(() => {
+          if (!keyboardPinned) {
+            requestKeyboard();
+            setKeyboardPinned(true);
+          } else {
+            const input = hiddenInputRef.current;
+            if (input) {
+              input.blur();
+              input.value = "";
+            }
+            setKeyboardPinned(false);
+          }
+        }, [keyboardPinned, requestKeyboard]);
+
+        useEffect(() => {
+          function handleVisibilityChange() {
+            if (document.hidden && keyboardPinned) {
+              setKeyboardPinned(false);
+              hiddenInputRef.current?.blur();
+            }
+          }
+
+          document.addEventListener("visibilitychange", handleVisibilityChange);
+          return () => {
+            document.removeEventListener(
+              "visibilitychange",
+              handleVisibilityChange
+            );
+          };
+        }, [keyboardPinned]);
 
         useEffect(() => {
           if (typeof window === "undefined" || !window.localStorage) {
@@ -946,6 +1045,26 @@ useEffect(() => {
               style={{ backgroundColor: backgroundColor }}
               ref={displayAreaRef}
             >
+              {isMobileAndroid && (
+                <>
+                  <input
+                    ref={hiddenInputRef}
+                    className="hidden-keyboard-input"
+                    aria-hidden="true"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck="false"
+                    type="text"
+                  />
+                  <button
+                    className="keyboard-toggle"
+                    onClick={handleKeyboardToggle}
+                  >
+                    {keyboardPinned ? t.keyboardHide : t.keyboardShow}
+                  </button>
+                </>
+              )}
+
               <button
                 className="settings-toggle"
                 onClick={() => setSettingsOpen((o) => !o)}
