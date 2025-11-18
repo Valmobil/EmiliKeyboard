@@ -668,6 +668,13 @@ const UK_LETTER_SOUNDS = {
           }
         }, [keyboardPinned, requestKeyboard]);
 
+        const handleDisplayAreaPointer = useCallback(() => {
+          if (!keyboardPinned) {
+            return;
+          }
+          window.setTimeout(requestKeyboard, 0);
+        }, [keyboardPinned, requestKeyboard]);
+
         useEffect(() => {
           function handleVisibilityChange() {
             if (document.hidden && keyboardPinned) {
@@ -982,12 +989,13 @@ useEffect(() => {
         // Обробка натискань клавіш
         useEffect(() => {
           function handleKeyDown(e) {
-            // не ловимо, якщо вводять у інпутах
-            const tag = e.target.tagName;
+            // ігноруємо стандартні поля введення, крім прихованого вводу
+            const target = e.target;
+            const tag = target.tagName;
+            const isHiddenKeyboard = target === hiddenInputRef.current;
             if (
-              tag === "INPUT" ||
-              tag === "SELECT" ||
-              tag === "TEXTAREA"
+              !isHiddenKeyboard &&
+              (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA")
             ) {
               return;
             }
@@ -1044,6 +1052,7 @@ useEffect(() => {
               className="display-area"
               style={{ backgroundColor: backgroundColor }}
               ref={displayAreaRef}
+              onPointerDown={handleDisplayAreaPointer}
             >
               {isMobileAndroid && (
                 <>
@@ -1055,6 +1064,9 @@ useEffect(() => {
                     autoCapitalize="none"
                     spellCheck="false"
                     type="text"
+                    onInput={(e) => {
+                      e.target.value = "";
+                    }}
                   />
                   <button
                     className="keyboard-toggle"
