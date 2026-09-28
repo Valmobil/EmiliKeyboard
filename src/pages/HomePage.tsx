@@ -32,7 +32,12 @@ export function HomePage({ onWords, onLesson }: HomePageProps) {
             <h2>Буквена клавіатура</h2>
             <p>Великі анімовані символи та озвучення натиснутих клавіш.</p>
           </div>
-          <a className="secondary-button button-link" href="/keyboard.html">Відкрити</a>
+          <a
+            className="secondary-button button-link"
+            href={`${import.meta.env.BASE_URL}keyboard.html`}
+          >
+            Відкрити
+          </a>
         </section>
       </div>
       <p className="local-note">Усі слова зберігаються тільки в цьому браузері.</p>
