@@ -231,8 +231,23 @@ button:focus-visible, a:focus-visible, input:focus-visible {
 .letter-bank { margin-bottom: clamp(22px, 4vh, 42px); }
 .word-slots { position: relative; isolation: isolate; }
 .letter-tile, .word-slot { display: grid; place-items: center; width: clamp(58px, 9vw, 92px); height: clamp(68px, 10vw, 102px); border-radius: 18px; font: 900 clamp(2rem, 5vw, 3.8rem) "Nunito"; user-select: none; }
-.letter-tile { border: 3px solid #e5b84d; color: #3b392f; background: var(--yellow); box-shadow: 0 7px 0 #ce9f35; cursor: grab; touch-action: manipulation; }
+.letter-tile { border: 3px solid #e5b84d; color: #3b392f; background: var(--yellow); box-shadow: 0 7px 0 #ce9f35; cursor: grab; touch-action: none; }
 .letter-tile:active { cursor: grabbing; transform: translateY(5px); box-shadow: 0 2px 0 #ce9f35; }
+.letter-drag-ghost {
+  position: fixed;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  width: clamp(64px, 10vw, 100px);
+  height: clamp(74px, 11vw, 110px);
+  border: 4px solid #e5b84d;
+  border-radius: 20px;
+  color: #3b392f;
+  background: var(--yellow);
+  box-shadow: 0 16px 35px rgba(55, 48, 28, .3);
+  transform: translate(-50%, -58%) scale(1.08);
+  pointer-events: none;
+}
 .word-slot { border: 3px dashed #93a6a0; background: rgba(255,255,255,.65); cursor: default; }
 .word-slot.filled { border-style: solid; border-color: var(--green); color: var(--green-dark); background: #fff; cursor: pointer; }
 .word-slot.wrong { border-color: var(--coral); background: #fff0ec; animation: soft-wiggle .35s ease; }

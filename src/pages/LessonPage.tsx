@@ -161,6 +161,7 @@ export function LessonPage({ words, onFinish }: LessonPageProps) {
             tile={tile}
             onActivity={registerLetterActivity}
             onDoubleClick={() => placeTile(tile.id)}
+            onDropInSlot={(slotIndex) => placeTile(tile.id, slotIndex)}
           />
         ))}
       </div>
@@ -186,6 +187,7 @@ export function LessonPage({ words, onFinish }: LessonPageProps) {
           return (
             <button
               key={index}
+              data-slot-index={index}
               className={`word-slot ${tile ? "filled" : ""} ${wrong ? "wrong" : ""}`}
               onClick={() => returnTile(index)}
               onPointerDown={registerLetterActivity}
