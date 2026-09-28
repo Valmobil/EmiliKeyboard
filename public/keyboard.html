@@ -648,12 +648,16 @@ const UK_LETTER_SOUNDS = {
           uiLang: "uk",
         };
 
-        const isMobileAndroid = useMemo(() => {
+        const shouldShowVirtualKeyboard = useMemo(() => {
           if (typeof navigator === "undefined") {
             return false;
           }
           const ua = navigator.userAgent || navigator.vendor || "";
-          return /android/i.test(ua);
+          const isAndroid = /android/i.test(ua);
+          const hasTouch = navigator.maxTouchPoints > 0 || "ontouchstart" in window;
+          const hasCoarsePointer =
+            window.matchMedia?.("(any-pointer: coarse)").matches ?? false;
+          return isAndroid || hasTouch || hasCoarsePointer;
         }, []);
 
         const requestKeyboard = useCallback(() => {
@@ -1120,6 +1124,19 @@ useEffect(() => {
             : "mode-fade";
 
         const salutFontSize = undefined;
+        const currentModeName =
+          (mode === "grow"
+            ? t.modeGrow
+            : mode === "spin"
+            ? t.modeSpin
+            : mode === "top"
+            ? t.modeTop
+            : mode === "side"
+            ? t.modeSide
+            : mode === "salut"
+            ? t.modeSalut
+            : t.modeFade
+          ).replace(/^\d+\s*—\s*/, "");
 
         return (
           <div className="app">
@@ -1129,7 +1146,7 @@ useEffect(() => {
               ref={displayAreaRef}
               onPointerDown={handleDisplayAreaPointer}
             >
-              {isMobileAndroid && (
+              {shouldShowVirtualKeyboard && (
                 <>
                   <input
                     ref={hiddenInputRef}
@@ -1189,19 +1206,7 @@ useEffect(() => {
                 <div className="hint-text">
                   {t.toggleHint}
                   <br />
-                  ({t.modeLabel}: {" "}
-                  {mode === "grow"
-                    ? "1"
-                    : mode === "spin"
-                    ? "2"
-                    : mode === "top"
-                    ? "3"
-                    : mode === "side"
-                    ? "4"
-                    : mode === "salut"
-                    ? "6"
-                    : "5"}
-                  )
+                  ({t.modeLabel}: {currentModeName})
                 </div>
               )}
 
