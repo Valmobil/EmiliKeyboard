@@ -101,10 +101,15 @@ export function LessonPage({ words, onFinish }: LessonPageProps) {
     if (!tile) return;
     const destination = slotIndex ?? slots.findIndex((item) => item === null);
     if (destination < 0) return;
-    setAvailable((items) => items.filter((item) => item.id !== tileId));
+    const displacedTile = slots[destination];
+    setAvailable((items) => {
+      const remaining = items.filter((item) => item.id !== tileId);
+      return displacedTile && !remaining.some((item) => item.id === displacedTile.id)
+        ? [...remaining, displacedTile]
+        : remaining;
+    });
     setSlots((items) => {
       const next = [...items];
-      if (next[destination]) setAvailable((current) => [...current, next[destination]!]);
       next[destination] = tile;
       return next;
     });
