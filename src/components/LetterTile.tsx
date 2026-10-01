@@ -50,11 +50,29 @@ export function LetterTile({ tile, onDoubleClick, onActivity, onDropInSlot }: Le
     if (!touchStart.current || event.pointerType === "mouse") return;
     if (isTouchDragging.current) {
       suppressClick.current = true;
-      const target = document
-        .elementFromPoint(event.clientX, event.clientY)
-        ?.closest<HTMLElement>("[data-slot-index]");
-      const slotIndex = Number(target?.dataset.slotIndex);
-      if (target && Number.isInteger(slotIndex)) onDropInSlot(slotIndex);
+      const nearestSlot = Array.from(
+        document.querySelectorAll<HTMLElement>("[data-slot-index]"),
+      )
+        .map((element) => {
+          const rect = element.getBoundingClientRect();
+          const centerX = rect.left + rect.width / 2;
+          const centerY = rect.top + rect.height / 2;
+          const insideExpandedTarget =
+            event.clientX >= rect.left - rect.width / 2 &&
+            event.clientX <= rect.right + rect.width / 2 &&
+            event.clientY >= rect.top - rect.height / 2 &&
+            event.clientY <= rect.bottom + rect.height / 2;
+          return {
+            element,
+            insideExpandedTarget,
+            distance: Math.hypot(event.clientX - centerX, event.clientY - centerY),
+          };
+        })
+        .filter(({ insideExpandedTarget }) => insideExpandedTarget)
+        .sort((first, second) => first.distance - second.distance)[0]?.element;
+
+      const slotIndex = Number(nearestSlot?.dataset.slotIndex);
+      if (nearestSlot && Number.isInteger(slotIndex)) onDropInSlot(slotIndex);
     }
     touchStart.current = null;
     isTouchDragging.current = false;
