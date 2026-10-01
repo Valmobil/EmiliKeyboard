@@ -82,16 +82,18 @@ export function LetterTile({ tile, onDoubleClick, onActivity, onDropInSlot }: Le
   }
 
   return (
-    <button
-      className="letter-tile"
-      onClick={handleActivation}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={finishPointerDrag}
-      onPointerCancel={finishPointerDrag}
-      aria-label={`Літера ${tile.letter}. Натисніть двічі або перетягніть.`}
-    >
-      {tile.letter}
+    <>
+      <button
+        className="letter-tile"
+        onClick={handleActivation}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={finishPointerDrag}
+        onPointerCancel={finishPointerDrag}
+        aria-label={`Літера ${tile.letter}. Натисніть двічі або перетягніть.`}
+      >
+        {tile.letter}
+      </button>
       {dragPosition && (
         <span
           className="letter-drag-ghost"
@@ -101,6 +103,6 @@ export function LetterTile({ tile, onDoubleClick, onActivity, onDropInSlot }: Le
           {tile.letter}
         </span>
       )}
-    </button>
+    </>
   );
 }
