@@ -10,8 +10,8 @@ interface LetterTileProps {
 
 export function LetterTile({ tile, onDoubleClick, onActivity, onDropInSlot }: LetterTileProps) {
   const lastActivation = useRef(0);
-  const touchStart = useRef<{ x: number; y: number } | null>(null);
-  const isTouchDragging = useRef(false);
+  const dragStart = useRef<{ x: number; y: number } | null>(null);
+  const isPointerDragging = useRef(false);
   const suppressClick = useRef(false);
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
 
@@ -31,24 +31,23 @@ export function LetterTile({ tile, onDoubleClick, onActivity, onDropInSlot }: Le
 
   function handlePointerDown(event: ReactPointerEvent<HTMLButtonElement>) {
     onActivity?.();
-    if (event.pointerType === "mouse") return;
-    touchStart.current = { x: event.clientX, y: event.clientY };
-    isTouchDragging.current = false;
+    dragStart.current = { x: event.clientX, y: event.clientY };
+    isPointerDragging.current = false;
     event.currentTarget.setPointerCapture(event.pointerId);
   }
 
   function handlePointerMove(event: ReactPointerEvent<HTMLButtonElement>) {
-    const start = touchStart.current;
-    if (!start || event.pointerType === "mouse") return;
+    const start = dragStart.current;
+    if (!start) return;
     const distance = Math.hypot(event.clientX - start.x, event.clientY - start.y);
-    if (distance < 8 && !isTouchDragging.current) return;
-    isTouchDragging.current = true;
+    if (distance < 8 && !isPointerDragging.current) return;
+    isPointerDragging.current = true;
     setDragPosition({ x: event.clientX, y: event.clientY });
   }
 
-  function finishTouchDrag(event: ReactPointerEvent<HTMLButtonElement>) {
-    if (!touchStart.current || event.pointerType === "mouse") return;
-    if (isTouchDragging.current) {
+  function finishPointerDrag(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (!dragStart.current) return;
+    if (isPointerDragging.current) {
       suppressClick.current = true;
       const nearestSlot = Array.from(
         document.querySelectorAll<HTMLElement>("[data-slot-index]"),
@@ -74,8 +73,8 @@ export function LetterTile({ tile, onDoubleClick, onActivity, onDropInSlot }: Le
       const slotIndex = Number(nearestSlot?.dataset.slotIndex);
       if (nearestSlot && Number.isInteger(slotIndex)) onDropInSlot(slotIndex);
     }
-    touchStart.current = null;
-    isTouchDragging.current = false;
+    dragStart.current = null;
+    isPointerDragging.current = false;
     setDragPosition(null);
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
@@ -88,14 +87,8 @@ export function LetterTile({ tile, onDoubleClick, onActivity, onDropInSlot }: Le
       onClick={handleActivation}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
-      onPointerUp={finishTouchDrag}
-      onPointerCancel={finishTouchDrag}
-      draggable
-      onDragStart={(event) => {
-        onActivity?.();
-        event.dataTransfer.setData("text/plain", tile.id);
-        event.dataTransfer.effectAllowed = "move";
-      }}
+      onPointerUp={finishPointerDrag}
+      onPointerCancel={finishPointerDrag}
       aria-label={`Літера ${tile.letter}. Натисніть двічі або перетягніть.`}
     >
       {tile.letter}

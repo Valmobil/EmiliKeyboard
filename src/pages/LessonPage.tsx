@@ -191,11 +191,6 @@ export function LessonPage({ words, onFinish }: LessonPageProps) {
               className={`word-slot ${tile ? "filled" : ""} ${wrong ? "wrong" : ""}`}
               onClick={() => returnTile(index)}
               onPointerDown={registerLetterActivity}
-              onDragOver={(event) => event.preventDefault()}
-              onDrop={(event) => {
-                event.preventDefault();
-                placeTile(event.dataTransfer.getData("text/plain"), index);
-              }}
               aria-label={tile ? `Позиція ${index + 1}, літера ${tile.letter}. Натисніть, щоб повернути.` : `Порожня позиція ${index + 1}`}
             >
               {tile?.letter}
