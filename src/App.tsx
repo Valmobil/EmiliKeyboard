@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { trackScreenView } from "./services/analytics";
 import type { Word } from "./models/Word";
 import { HomePage } from "./pages/HomePage";
 import { LessonPage } from "./pages/LessonPage";
@@ -16,6 +17,7 @@ export default function App() {
   const [lessonWords, setLessonWords] = useState<Word[]>([]);
 
   useEffect(() => saveWords(words), [words]);
+  useEffect(() => trackScreenView(page), [page]);
 
   const goHome = useCallback(() => {
     if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);

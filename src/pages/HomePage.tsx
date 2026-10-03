@@ -1,3 +1,5 @@
+import { AnalyticsConsentBanner } from "../components/AnalyticsConsentBanner";
+
 export interface HomePageProps {
   onWords: () => void;
   onLesson: () => void;
@@ -41,6 +43,7 @@ export function HomePage({ onWords, onLesson }: HomePageProps) {
         </section>
       </div>
       <p className="local-note">Усі слова зберігаються тільки в цьому браузері.</p>
+      <AnalyticsConsentBanner />
     </main>
   );
 }

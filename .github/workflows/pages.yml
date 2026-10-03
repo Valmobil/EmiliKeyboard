@@ -40,6 +40,8 @@ jobs:
 
       - name: Build
         run: pnpm build
+        env:
+          VITE_GA_MEASUREMENT_ID: ${{ vars.GA_MEASUREMENT_ID }}
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
